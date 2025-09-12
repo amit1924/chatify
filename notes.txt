@@ -1,2 +1,49 @@
 npm i express@4.21.2 mongoose@8.10.1 jsonwebtoken@9.0.2 bcryptjs@2.4.3
 npm i express@4.21.2 mongoose@8.10.1 jsonwebtoken@9.0.2 bcryptjs@2.4.3
+
+
+set github account in vscode
+git config user.name "Your Name"
+git config user.email "your@email.com"
+
+🧩 What --prefix means
+
+The --prefix <folder> flag tells npm:
+👉 “Run this command as if you were inside that folder.”
+
+So instead of cd backend && npm install, you can stay in the root and just do it in one line.
+
+⚛️ npm run build --prefix frontend
+→ runs the build script defined inside frontend/package.json (Vite build).
+
+app.use(express.static(...))
+
+📂 express.static is middleware that tells Express:
+👉 “Whenever someone requests a file (like /index.html or /style.css), go look inside this folder and serve it.”
+
+path.join(__dirname, '../frontend/dist')
+
+🛣 Builds the full file path to your frontend build folder:
+
+__dirname → current backend folder.
+
+../frontend/dist → steps one level up, then into frontend/dist.
+
+🎬 Example
+
+Say your project is:
+backend/server.js
+frontend/dist/index.html
+frontend/dist/assets/index.js
+
+When a user hits / in the browser:
+
+🔍 Express looks in frontend/dist.
+
+Finds index.html.
+
+Sends it back → React app loads.
+
+When a user hits /about:
+
+React handles it in client-side routing (after Express serves index.html).
