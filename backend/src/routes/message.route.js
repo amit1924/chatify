@@ -1,7 +1,30 @@
 import express from 'express';
+import {
+  getChatPartners,
+  getAllContacts,
+  getMessagesByUserId,
+  sendMessage,
+} from '../controllers/message.controller.js';
+import { protectRoute } from '../middleware/auth.middleware.js';
+import { createRateLimiter } from '../lib/limiter.js';
 
 const router = express.Router();
 
+createRateLimiter(router, {
+  limit: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  message: 'Too many requests from this IP, please try again after 15 minutes.',
+});
+
+router.use(protectRoute);
+
+// Order matters! Static routes first
+router.get('/contacts', getAllContacts);
+router.get('/chats', getChatPartners);
+
+// Dynamic routes after
+router.get('/:id', getMessagesByUserId);
+router.post('/send/:id', sendMessage);
 router.get('/send', (req, res) => {
   // Send a message to the user
   res.json({ message: 'Message sent successfully' });
