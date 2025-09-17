@@ -164,4 +164,4 @@ res.status(200).json(chatPartners);
 
 Returns the partners to the client.
 
-5:03:22
+5:47:26
