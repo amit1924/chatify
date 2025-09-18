@@ -28,19 +28,38 @@ export const useAuthStore = create((set, get) => ({
   },
 
   // ✅ Signup
+  // signup: async (formData) => {
+  //   set({ isSigningUp: true });
+  //   try {
+  //     const response = await axiosInstance.post('/auth/signup', formData);
+  //     set({ authUser: response.data });
+  //     toast.success(
+  //       response?.data?.message || 'Signup successful! 🎉 Welcome aboard.',
+  //     );
+  //     get().connectSocket();
+  //   } catch (error) {
+  //     toast.error(
+  //       error.response?.data?.message || 'Signup failed. Please try again.',
+  //     );
+  //   } finally {
+  //     set({ isSigningUp: false });
+  //   }
+  // },
+
   signup: async (formData) => {
     set({ isSigningUp: true });
     try {
       const response = await axiosInstance.post('/auth/signup', formData);
-      set({ authUser: response.data });
+      // Don't set authUser here!
       toast.success(
-        response?.data?.message || 'Signup successful! 🎉 Welcome aboard.',
+        response?.data?.message || 'Signup successful! 🎉 Please login.',
       );
-      get().connectSocket();
+      return true; // indicate success
     } catch (error) {
       toast.error(
         error.response?.data?.message || 'Signup failed. Please try again.',
       );
+      return false; // indicate failure
     } finally {
       set({ isSigningUp: false });
     }
