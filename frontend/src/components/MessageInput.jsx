@@ -65,7 +65,7 @@ const MessageInput = () => {
   return (
     <form
       onSubmit={handleSendMessage}
-      className="flex items-center gap-2 p-2 bg-white rounded-lg shadow"
+      className="flex items-center gap-2 p-2 bg-gray-800 rounded-lg shadow-md"
     >
       {/* Image Upload */}
       <label className="cursor-pointer hover:scale-110 transition-transform">

@@ -125,7 +125,7 @@ function ProfileHeader() {
   };
 
   return (
-    <div className="flex items-center justify-between p-3 bg-white shadow rounded-md">
+    <div className="flex items-center justify-between p-3 bg-gray-800 shadow-md rounded-md">
       <div className="flex items-center gap-3">
         <div className="relative">
           <button
@@ -152,7 +152,7 @@ function ProfileHeader() {
         </div>
 
         <div>
-          <h3 className="font-semibold text-slate-800">{authUser.fullName}</h3>
+          <h3 className="font-semibold text-white">{authUser.fullName}</h3>
           <p className="text-sm text-green-600">Online</p>
         </div>
       </div>

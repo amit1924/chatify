@@ -39,7 +39,7 @@ app.use(botDetector);
 
 // Global rate limiter
 const globalLimiter = new RateLimiter({
-  limit: 200,
+  limit: 2000,
   windowMs: 15 * 60 * 1000, // 15 minutes
 }).getMiddleware();
 app.use(globalLimiter);

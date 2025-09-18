@@ -10,12 +10,12 @@ import { createRateLimiter } from '../lib/limiter.js';
 
 const router = express.Router();
 
+// Messages routes: higher limit for chat
 createRateLimiter(router, {
-  limit: 100,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  message: 'Too many requests from this IP, please try again after 15 minutes.',
+  limit: 10000,
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many requests, slow down a bit!',
 });
-
 router.use(protectRoute);
 
 // Order matters! Static routes first

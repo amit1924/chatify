@@ -10,11 +10,11 @@ import { createRateLimiter } from '../lib/limiter.js';
 
 const router = express.Router();
 
-//apply bot + rate limiting middleware to all auth routes
+// Auth routes: stricter limits
 createRateLimiter(router, {
   limit: 50,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  message: 'Too many requests from this IP, please try again after 15 minutes.',
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many auth requests, try again in 15 minutes.',
 });
 
 router.post('/signup', signup);
