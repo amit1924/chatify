@@ -1,60 +1,3 @@
-// import React, { useEffect } from 'react';
-// import { useChatStore } from '../store/useChatStore';
-// import UserLoadingSkeleton from './UserLoadingSkeleton';
-// import NoChatFound from './NoChatFound';
-// import { useAuthStore } from '../store/useAuthStore';
-
-// const ChatsList = () => {
-//   const { getMyChatPartners, chats, isUserLoading, setSelectedUser } =
-//     useChatStore();
-//   const { onlineUsers } = useAuthStore();
-
-//   useEffect(() => {
-//     getMyChatPartners();
-//   }, [getMyChatPartners]);
-
-//   if (isUserLoading) {
-//     return (
-//       <div className="p-4 bg-slate-900 shadow-lg rounded-xl">
-//         <UserLoadingSkeleton />
-//       </div>
-//     );
-//   }
-
-//   if (chats.length === 0) {
-//     return <NoChatFound />;
-//   }
-
-//   return (
-//     <div className="space-y-3 p-2">
-//       {chats.map((chat) => (
-//         <div
-//           key={chat._id}
-//           onClick={() => setSelectedUser(chat)}
-//           className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl shadow-md hover:bg-slate-700 cursor-pointer transition-all duration-200"
-//         >
-//           {/* Avatar */}
-//           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-cyan-500">
-//             <img
-//               src={chat.profilePic || '/hacker.png'}
-//               alt={chat.fullName}
-//               className="w-full h-full object-cover"
-//             />
-//           </div>
-
-//           {/* Chat Info */}
-//           <div className="flex-1">
-//             <h4 className="text-slate-200 font-medium truncate">
-//               {chat.fullName}
-//             </h4>
-//           </div>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default ChatsList;
 import React, { useEffect } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -72,48 +15,49 @@ const ChatsList = () => {
 
   if (isUserLoading) {
     return (
-      <div className="p-4 bg-slate-900 shadow-lg rounded-xl">
+      <div className="p-3 sm:p-4 bg-gray-900/80 rounded-xl shadow-md">
         <UserLoadingSkeleton />
       </div>
     );
   }
 
-  if (chats.length === 0) {
+  if (!chats?.length) {
     return <NoChatFound />;
   }
 
   return (
-    <div className="space-y-3 p-2">
+    <div className="flex flex-col gap-2 p-2 sm:p-3">
       {chats.map((chat) => {
-        const isOnline = onlineUsers.includes(chat._id); // ✅ check online status
+        const isOnline = onlineUsers?.includes(chat._id);
 
         return (
-          <div
+          <button
             key={chat._id}
+            type="button"
             onClick={() => setSelectedUser(chat)}
-            className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl shadow-md hover:bg-slate-700 cursor-pointer transition-all duration-200"
+            className="flex items-center gap-3 w-full rounded-xl p-3 sm:p-4 bg-gray-800/70 backdrop-blur-sm shadow hover:bg-gray-700/70 transition-colors"
           >
-            {/* Avatar with online/offline dot */}
-            <div className="relative w-12 h-12">
+            {/* Avatar with status */}
+            <div className="relative shrink-0">
               <img
                 src={chat.profilePic || '/hacker.png'}
-                alt={chat.fullName}
-                className="w-12 h-12 rounded-full object-cover border-2 border-cyan-500"
+                alt={chat.fullName || 'User'}
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ring-cyan-400"
               />
               <span
-                className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${
+                className={`absolute bottom-0 right-0 block w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full ring-2 ring-gray-900 ${
                   isOnline ? 'bg-green-500' : 'bg-gray-500'
                 }`}
-              ></span>
+              />
             </div>
 
-            {/* Chat Info */}
-            <div className="flex-1">
-              <h4 className="text-slate-200 font-medium truncate">
+            {/* Name */}
+            <div className="flex-1 min-w-0">
+              <h4 className="text-gray-100 text-sm sm:text-base font-medium truncate">
                 {chat.fullName}
               </h4>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
