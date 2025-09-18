@@ -39,6 +39,13 @@ const MessageInput = () => {
     sendTypingStatus(selectedUser._id, false);
   };
 
+  //send message by pressing enter key
+  const handleEnterKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      handleSendMessage(e);
+    }
+  };
+
   const handleTextChange = (e) => {
     setText(e.target.value);
     if (isSoundEnabled) playRandomKeystrokeSound();
@@ -98,6 +105,7 @@ const MessageInput = () => {
         ref={textareaRef}
         value={text}
         onChange={handleTextChange}
+        onKeyDown={handleEnterKey}
         placeholder="Type a message..."
         rows={1}
         className="flex-1 p-2 rounded-md bg-gray-700 text-white outline-none resize-none max-h-40 overflow-y-auto border border-gray-600"
