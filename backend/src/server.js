@@ -2,6 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import cors from 'cors';
+import { app, server } from './lib/socket.js';
 import authRoutes from './routes/auth.route.js';
 import messageRoutes from './routes/message.route.js';
 import { connectDB } from './lib/db.js';
@@ -10,44 +12,47 @@ import {
   RateLimiter,
   botDetector,
 } from './middleware/rateLimiter.middleware.js';
-import cors from 'cors';
-
-// CORS configuration
-const corsOptions = {
-  origin: ENV.CLIENT_URL || 'http://localhost:5173',
-  credentials: true, // Allow cookies to be sent
-};
 
 dotenv.config();
-const app = express();
-app.use(cors(corsOptions));
 
 const PORT = ENV.PORT || 3000;
 const __dirname = path.resolve();
 
-app.use(express.json());
+// -----------------------------
+// CORS Configuration
+// -----------------------------
+const corsOptions = {
+  origin: ENV.CLIENT_URL || 'http://localhost:5173',
+  credentials: true, // Allow cookies to be sent
+};
+app.use(cors(corsOptions));
+
+// -----------------------------
+// Middleware
+// -----------------------------
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 
-// --- Bot Detector ---
+// Bot detector
 app.use(botDetector);
 
-// --- Global Rate Limiter ---
+// Global rate limiter
 const globalLimiter = new RateLimiter({
   limit: 200,
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
 }).getMiddleware();
 app.use(globalLimiter);
 
-// --- Routes ---
+// -----------------------------
+// API Routes
+// -----------------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Production: Serve frontend
-if (ENV.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-}
-
-//test its bot or human
+// -----------------------------
+// Test route for bot detection
+// -----------------------------
 app.get('/test-bot', botDetector, (req, res) => {
   if (!req.isBot) {
     return res
@@ -58,13 +63,23 @@ app.get('/test-bot', botDetector, (req, res) => {
   }
 });
 
-// Catch-all route for SPA
-app.get('*', (_, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
+// -----------------------------
+// Serve frontend in production
+// -----------------------------
+if (ENV.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
 
-// Start server & connect DB
-app.listen(PORT, () => {
+  // Catch-all route for SPA
+  app.get('*', (_, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
+// -----------------------------
+// Start server & connect to DB
+// -----------------------------
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}...`);
   connectDB();
 });

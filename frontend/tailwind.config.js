@@ -5,6 +5,14 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      colors: {
+        neonPink: '#ff00ff',
+        neonCyan: '#00ffff',
+        neonPurple: '#8000ff',
+      },
+      boxShadow: {
+        neon: '0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff',
+      },
       keyframes: {
         'gradient-x': {
           '0%, 100%': { 'background-position': '0% 50%' },

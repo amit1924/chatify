@@ -1,20 +1,17 @@
-import React from 'react';
-
-const MessagesLoadingSkeleton = () => {
+function MessagesLoadingSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {[...Array(6)].map((_, index) => (
         <div
-          key={i}
-          className={`flex ${
-            i % 4 === 0 ? 'justify-start' : 'justify-end'
+          key={index}
+          className={`chat ${
+            index % 2 === 0 ? 'chat-start' : 'chat-end'
           } animate-pulse`}
         >
-          <div className="bg-slate-700 rounded-xl h-12 w-48"></div>
+          <div className={`chat-bubble bg-slate-800 text-white w-32`}></div>
         </div>
       ))}
     </div>
   );
-};
-
+}
 export default MessagesLoadingSkeleton;
