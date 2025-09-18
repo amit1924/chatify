@@ -5,6 +5,7 @@
 // import NoChatHistoryPlaceholder from './NoChatHistoryPlacholder';
 // import MessageInput from './MessageInput';
 // import MessagesLoadingSkeleton from './MessagesLoadingkeleton';
+
 // const ChatContainer = () => {
 //   const {
 //     selectedUser,
@@ -22,7 +23,7 @@
 //   const messageEndRef = useRef(null);
 //   const [prevLength, setPrevLength] = useState(0);
 
-//   // Fetch messages and subscribe when selectedUser changes
+//   // Fetch messages & subscribe to updates
 //   useEffect(() => {
 //     if (!selectedUser) return;
 
@@ -43,15 +44,22 @@
 //     unsubscribeFromTyping,
 //   ]);
 
-//   // Scroll to bottom on new messages
+//   // Scroll to bottom on new messages without losing focus
 //   useEffect(() => {
 //     if (!messageEndRef.current) return;
+
 //     const isNewMessage = messages.length > prevLength;
 //     const behavior = isNewMessage ? 'smooth' : 'auto';
 
+//     const activeElement = document.activeElement;
+
 //     const timeout = setTimeout(() => {
 //       messageEndRef.current?.scrollIntoView({ block: 'end', behavior });
-//     }, 0);
+//       // Restore focus if input was active
+//       if (activeElement && activeElement.tagName === 'INPUT') {
+//         activeElement.focus({ preventScroll: true });
+//       }
+//     }, 50);
 
 //     setPrevLength(messages.length);
 //     return () => clearTimeout(timeout);
@@ -73,7 +81,7 @@
 //       <ChatHeader />
 
 //       {/* Messages */}
-//       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-900">
+//       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 //         {isMessagesLoading ? (
 //           <MessagesLoadingSkeleton />
 //         ) : messages.length === 0 ? (
@@ -173,7 +181,7 @@ const ChatContainer = () => {
   const messageEndRef = useRef(null);
   const [prevLength, setPrevLength] = useState(0);
 
-  // Fetch messages & subscribe to updates
+  // Fetch & subscribe
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -194,22 +202,23 @@ const ChatContainer = () => {
     unsubscribeFromTyping,
   ]);
 
-  // Scroll to bottom on new messages without losing focus
+  // Scroll on new messages without losing focus
   useEffect(() => {
     if (!messageEndRef.current) return;
 
-    const isNewMessage = messages.length > prevLength;
-    const behavior = isNewMessage ? 'smooth' : 'auto';
+    const isNew = messages.length > prevLength;
+    const wasFocused =
+      document.activeElement &&
+      ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
 
-    const activeElement = document.activeElement;
+    const behavior = isNew ? 'smooth' : 'auto';
 
     const timeout = setTimeout(() => {
       messageEndRef.current?.scrollIntoView({ block: 'end', behavior });
-      // Restore focus if input was active
-      if (activeElement && activeElement.tagName === 'INPUT') {
-        activeElement.focus({ preventScroll: true });
+      if (wasFocused && document.activeElement) {
+        document.activeElement.focus({ preventScroll: true });
       }
-    }, 50);
+    }, 40);
 
     setPrevLength(messages.length);
     return () => clearTimeout(timeout);
@@ -227,10 +236,8 @@ const ChatContainer = () => {
 
   return (
     <div className="flex h-full flex-col bg-gray-900 text-white">
-      {/* Header */}
       <ChatHeader />
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {isMessagesLoading ? (
           <MessagesLoadingSkeleton />
@@ -289,14 +296,12 @@ const ChatContainer = () => {
         )}
       </div>
 
-      {/* Typing indicator */}
       {isUserTyping && (
         <div className="px-4 py-2 text-sm text-gray-400">
           {selectedUser.fullName} is typing…
         </div>
       )}
 
-      {/* Message input */}
       <div className="border-t border-gray-700 bg-gray-800 px-4 py-3">
         <MessageInput />
       </div>
