@@ -1491,7 +1491,7 @@ const ChatContainer = () => {
                     onClick={() => isSender && setActiveMsgId(msg._id)}
                   >
                     <div
-                      className={`relative mx-0 sm:mx-2 max-w-sm sm:max-w-lg break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap ${
+                      className={`relative mx-0 sm:mx-2 max-w-sm sm:max-w-sm break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap ${
                         isSender
                           ? 'bg-cyan-800 text-white'
                           : 'bg-slate-800 text-slate-200'
