@@ -59,6 +59,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import { useAuthStore } from './store/useAuthStore';
 import PageLoader from './components/PageLoader';
+import { requestNotificationPermission } from './utils/notification';
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser } = useAuthStore();
@@ -66,6 +67,11 @@ function App() {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // 🔔 Ask for notification permission once when app loads
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   if (isCheckingAuth) return <PageLoader />;
 

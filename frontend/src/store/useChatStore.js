@@ -333,6 +333,11 @@ export const useChatStore = create((set, get) => ({
 
     if (!socket) return;
 
+    // 🔄 Clean old listeners first
+    socket.off('newMessage');
+    socket.off('messageDeleted');
+    socket.off('messageEdited');
+
     // 🟢 Handle new message
     socket.on('newMessage', (msg) => {
       const currentMessages = get().messages;
@@ -349,13 +354,36 @@ export const useChatStore = create((set, get) => ({
           },
         }));
 
-        // 🔔 Show notification
+        // 🔔 Toast notification
         toast.success(`New message from ${msg.senderName || 'Someone'}`);
 
         // 🎵 Play sound if enabled
         if (get().isSoundEnabled) {
           const audio = new Audio('/notification.mp3');
           audio.play().catch(() => {});
+        }
+
+        // 🌐 Browser Notification with click-to-open
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const notification = new Notification(
+            msg.senderName || 'New message',
+            {
+              body: msg.text || '📷 Image',
+              icon: msg.senderAvatar || '/hacker.png',
+            },
+          );
+
+          // 🖱️ Open chat when clicked
+          notification.onclick = () => {
+            window.focus();
+            set({
+              selectedUser: {
+                _id: msg.senderId,
+                name: msg.senderName,
+                avatar: msg.senderAvatar,
+              },
+            });
+          };
         }
       }
     });
