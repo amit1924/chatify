@@ -1466,7 +1466,7 @@ const ChatContainer = () => {
     <div className="relative flex h-full flex-col bg-gray-900 text-white">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative">
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 space-y-4 relative">
         {isMessagesLoading ? (
           <MessagesLoadingSkeleton />
         ) : messages.length === 0 ? (
@@ -1491,12 +1491,11 @@ const ChatContainer = () => {
                     onClick={() => isSender && setActiveMsgId(msg._id)}
                   >
                     <div
-                      className={`relative max-w-[75%] break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap
-                        ${
-                          isSender
-                            ? 'bg-cyan-600 text-white rounded-tr-none after:absolute after:top-0 after:right-[-8px] after:border-t-[16px] after:border-t-cyan-600 after:border-r-[16px] after:border-r-transparent'
-                            : 'bg-slate-800 text-slate-200 rounded-tl-none after:absolute after:top-0 after:left-[-8px] after:border-t-[16px] after:border-t-slate-800 after:border-l-[16px] after:border-l-transparent'
-                        }`}
+                      className={`relative mx-0 sm:mx-2 max-w-sm sm:max-w-lg break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap ${
+                        isSender
+                          ? 'bg-cyan-800 text-white'
+                          : 'bg-slate-800 text-slate-200'
+                      }`}
                     >
                       {/* Edit mode */}
                       {editingId === msg._id ? (
@@ -1553,9 +1552,7 @@ const ChatContainer = () => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             transition={{ duration: 0.15 }}
-                            className={`absolute -top-8 ${
-                              isSender ? 'right-0' : 'left-0'
-                            } flex gap-2`}
+                            className="absolute -top-8 right-0 flex gap-2"
                           >
                             <button
                               className="px-2 py-1 text-xs bg-cyan-600 rounded text-white"
