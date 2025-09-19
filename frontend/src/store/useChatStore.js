@@ -229,30 +229,74 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  // sendMessage: async (data) => {
+  //   const { selectedUser, messages } = get();
+  //   const authUser = useAuthStore.getState().authUser;
+
+  //   const tempMsg = {
+  //     _id: `temp-${Date.now()}`,
+  //     senderId: authUser._id,
+  //     receiverId: selectedUser._id,
+  //     text: data.text,
+  //     image: data.image,
+  //     createdAt: new Date().toISOString(),
+  //     isOptimistic: true,
+  //   };
+
+  //   set({ messages: [...messages, tempMsg] });
+
+  //   try {
+  //     const res = await axiosInstance.post(
+  //       `/messages/send/${selectedUser._id}`,
+  //       data,
+  //     );
+  //     set({ messages: [...messages.filter((m) => !m.isOptimistic), res.data] });
+  //   } catch (err) {
+  //     set({ messages }); // rollback
+  //     toast.error(err.response?.data?.message || 'Message failed');
+  //   }
+  // },
+
   sendMessage: async (data) => {
     const { selectedUser, messages } = get();
     const authUser = useAuthStore.getState().authUser;
 
+    const tempId = `temp-${Date.now()}`;
     const tempMsg = {
-      _id: `temp-${Date.now()}`,
+      _id: tempId,
       senderId: authUser._id,
       receiverId: selectedUser._id,
       text: data.text,
-      image: data.image,
+      image: data.image, // already base64
       createdAt: new Date().toISOString(),
       isOptimistic: true,
     };
 
+    // optimistic UI update
     set({ messages: [...messages, tempMsg] });
 
     try {
+      console.log('👉 sending to backend:', {
+        text: data.text,
+        imageLength: data.image?.length, // check base64 length
+      });
+
       const res = await axiosInstance.post(
         `/messages/send/${selectedUser._id}`,
-        data,
+        {
+          text: data.text,
+          image: data.image, // send base64 string
+        },
       );
-      set({ messages: [...messages.filter((m) => !m.isOptimistic), res.data] });
+
+      // replace optimistic msg with real msg from server
+      set((state) => ({
+        messages: state.messages.map((m) => (m._id === tempId ? res.data : m)),
+      }));
     } catch (err) {
-      set({ messages }); // rollback
+      // rollback if failed
+      set({ messages });
+      console.error('❌ sendMessage error:', err.response?.data || err.message);
       toast.error(err.response?.data?.message || 'Message failed');
     }
   },
