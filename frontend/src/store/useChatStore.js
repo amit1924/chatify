@@ -13,8 +13,15 @@
 //   isSoundEnabled: JSON.parse(localStorage.getItem('isSoundEnabled')) === true,
 //   typingStatus: {}, // { userId: true/false }
 //   activeTab: 'chats',
+//   unreadCounts: {}, // { userId: number }
 
-//   setSelectedUser: (user) => set({ selectedUser: user }),
+//   setSelectedUser: (user) => {
+//     // When selecting a chat, clear its unread count
+//     set((state) => ({
+//       selectedUser: user,
+//       unreadCounts: { ...state.unreadCounts, [user._id]: 0 },
+//     }));
+//   },
 //   setActiveTab: (tab) => set({ activeTab: tab }),
 
 //   toggleSound: () => {
@@ -84,7 +91,7 @@
 //       );
 //       set({ messages: [...messages.filter((m) => !m.isOptimistic), res.data] });
 //     } catch (err) {
-//       set({ messages: messages }); // rollback
+//       set({ messages }); // rollback
 //       toast.error(err.response?.data?.message || 'Message failed');
 //     }
 //   },
@@ -112,14 +119,25 @@
 //   subscribeToMessages: () => {
 //     const socket = useAuthStore.getState().socket;
 //     const { selectedUser, isSoundEnabled } = get();
-//     if (!socket || !selectedUser) return;
+//     if (!socket) return;
 
 //     const notificationAudio = new Audio('/sounds/notification.mp3');
 
 //     socket.on('newMessage', (msg) => {
-//       if (msg.senderId !== selectedUser._id) return;
 //       const currentMessages = get().messages;
-//       set({ messages: [...currentMessages, msg] });
+
+//       // If the chat is currently open → push to messages
+//       if (selectedUser && msg.senderId === selectedUser._id) {
+//         set({ messages: [...currentMessages, msg] });
+//       } else {
+//         // Else increment unread count
+//         set((state) => ({
+//           unreadCounts: {
+//             ...state.unreadCounts,
+//             [msg.senderId]: (state.unreadCounts[msg.senderId] || 0) + 1,
+//           },
+//         }));
+//       }
 
 //       if (isSoundEnabled) {
 //         notificationAudio.currentTime = 0;
@@ -151,13 +169,20 @@ export const useChatStore = create((set, get) => ({
   activeTab: 'chats',
   unreadCounts: {}, // { userId: number }
 
+  //   ✅ Updated setter
   setSelectedUser: (user) => {
-    // When selecting a chat, clear its unread count
-    set((state) => ({
-      selectedUser: user,
-      unreadCounts: { ...state.unreadCounts, [user._id]: 0 },
-    }));
+    set((state) => {
+      if (!user) {
+        return { selectedUser: null };
+      }
+      return {
+        selectedUser: user,
+        unreadCounts: { ...state.unreadCounts, [user._id]: 0 },
+      };
+    });
   },
+
+  //active tab functionality
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   toggleSound: () => {
@@ -232,6 +257,56 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  deleteMessage: async (messageId) => {
+    const socket = useAuthStore.getState().socket;
+    const { selectedUser } = get();
+
+    try {
+      await axiosInstance.delete(`/messages/${messageId}`);
+      set((state) => ({
+        messages: state.messages.filter((m) => m._id !== messageId),
+      }));
+
+      // 🔴 notify receiver in real-time
+      if (socket && selectedUser) {
+        socket.emit('messageDeleted', {
+          receiverId: selectedUser._id,
+          messageId,
+        });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete');
+    }
+  },
+
+  editMessage: async (messageId, newText) => {
+    const socket = useAuthStore.getState().socket;
+    const { selectedUser } = get();
+
+    try {
+      const res = await axiosInstance.put(`/messages/${messageId}`, {
+        text: newText,
+      });
+
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m._id === messageId ? { ...m, text: res.data.text } : m,
+        ),
+      }));
+
+      // 🟢 notify receiver in real-time
+      if (socket && selectedUser) {
+        socket.emit('messageEdited', {
+          receiverId: selectedUser._id,
+          messageId,
+          newText: res.data.text,
+        });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to edit');
+    }
+  },
+
   sendTypingStatus: (receiverId, isTyping) => {
     const socket = useAuthStore.getState().socket;
     if (socket) socket.emit('typing', { receiverId, isTyping });
@@ -240,7 +315,6 @@ export const useChatStore = create((set, get) => ({
   subscribeToTyping: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
-
     socket.on('typing', ({ senderId, isTyping }) => {
       set((state) => ({
         typingStatus: { ...state.typingStatus, [senderId]: isTyping },
@@ -254,36 +328,59 @@ export const useChatStore = create((set, get) => ({
 
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
-    const { selectedUser, isSoundEnabled } = get();
+    const { selectedUser } = get();
+    const authUser = useAuthStore.getState().authUser;
+
     if (!socket) return;
 
-    const notificationAudio = new Audio('/sounds/notification.mp3');
-
+    // 🟢 Handle new message
     socket.on('newMessage', (msg) => {
       const currentMessages = get().messages;
 
-      // If the chat is currently open → push to messages
       if (selectedUser && msg.senderId === selectedUser._id) {
+        // If chat is open with sender → show immediately
         set({ messages: [...currentMessages, msg] });
-      } else {
-        // Else increment unread count
+      } else if (msg.receiverId === authUser._id) {
+        // If it's for me but not in the open chat → increase unread
         set((state) => ({
           unreadCounts: {
             ...state.unreadCounts,
             [msg.senderId]: (state.unreadCounts[msg.senderId] || 0) + 1,
           },
         }));
-      }
 
-      if (isSoundEnabled) {
-        notificationAudio.currentTime = 0;
-        notificationAudio.play().catch(() => {});
+        // 🔔 Show notification
+        toast.success(`New message from ${msg.senderName || 'Someone'}`);
+
+        // 🎵 Play sound if enabled
+        if (get().isSoundEnabled) {
+          const audio = new Audio('/notification.mp3');
+          audio.play().catch(() => {});
+        }
       }
+    });
+
+    // 🔴 Handle deletes
+    socket.on('messageDeleted', ({ messageId }) => {
+      set((state) => ({
+        messages: state.messages.filter((m) => m._id !== messageId),
+      }));
+    });
+
+    // 🟢 Handle edits
+    socket.on('messageEdited', ({ messageId, newText }) => {
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m._id === messageId ? { ...m, text: newText } : m,
+        ),
+      }));
     });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     socket?.off('newMessage');
+    socket?.off('messageDeleted');
+    socket?.off('messageEdited');
   },
 }));

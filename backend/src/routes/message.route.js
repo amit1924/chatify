@@ -4,6 +4,8 @@ import {
   getAllContacts,
   getMessagesByUserId,
   sendMessage,
+  editMessage,
+  deleteMessage,
 } from '../controllers/message.controller.js';
 import { protectRoute } from '../middleware/auth.middleware.js';
 import { createRateLimiter } from '../lib/limiter.js';
@@ -25,6 +27,10 @@ router.get('/chats', getChatPartners);
 // Dynamic routes after
 router.get('/:id', getMessagesByUserId);
 router.post('/send/:id', sendMessage);
+
+router.put('/:id', editMessage);
+router.delete('/:id', deleteMessage);
+
 router.get('/send', (req, res) => {
   // Send a message to the user
   res.json({ message: 'Message sent successfully' });

@@ -89,6 +89,26 @@ io.on('connection', (socket) => {
         isTyping,
       });
     }
+
+    // ------------------------------
+    // Handle message delete
+    // ------------------------------
+    socket.on('messageDeleted', ({ receiverId, messageId }) => {
+      const receiverSocketId = userSocketMap[receiverId];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('messageDeleted', { messageId });
+      }
+    });
+
+    // ------------------------------
+    // Handle message edit
+    // ------------------------------
+    socket.on('messageEdited', ({ receiverId, messageId, newText }) => {
+      const receiverSocketId = userSocketMap[receiverId];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('messageEdited', { messageId, newText });
+      }
+    });
   });
 
   socket.on('disconnect', () => {
