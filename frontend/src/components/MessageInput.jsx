@@ -165,7 +165,7 @@ import useKeyboardSound from '../../hook/useKeyboardSound';
 import toast from 'react-hot-toast';
 import { Image, Send, X } from 'lucide-react';
 
-const MessageInput = ({ replyTo, setReplyTo }) => {
+const MessageInput = ({ replyTo, setReplyTo, inputRef }) => {
   const { playRandomKeystrokeSound } = useKeyboardSound();
   const { sendMessage, isSoundEnabled, selectedUser, sendTypingStatus } =
     useChatStore();
@@ -179,8 +179,39 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
   const typingTimeoutRef = useRef(null);
   const isComposingRef = useRef(false);
 
+  // Use the forwarded ref or create a local one
+  const actualInputRef = inputRef || React.createRef();
+
+  // Combine refs to ensure both work
+  const setCombinedRefs = useCallback(
+    (element) => {
+      // Set the local ref
+      textareaRef.current = element;
+
+      // Set the forwarded ref if provided
+      if (actualInputRef) {
+        if (typeof actualInputRef === 'function') {
+          actualInputRef(element);
+        } else {
+          actualInputRef.current = element;
+        }
+      }
+    },
+    [actualInputRef],
+  );
+
   useEffect(() => {
-    textareaRef.current?.focus({ preventScroll: true });
+    // Focus without scrolling on mobile
+    const focusInput = () => {
+      if (textareaRef.current) {
+        // Small delay to ensure layout is stable
+        setTimeout(() => {
+          textareaRef.current.focus({ preventScroll: true });
+        }, 100);
+      }
+    };
+
+    focusInput();
   }, [selectedUser]);
 
   const handleSendMessage = async (e) => {
@@ -188,29 +219,38 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
     if (!text.trim() && !imagePreview) return;
 
     setIsSending(true);
-    await sendMessage({
-      text: text.trim(),
-      image: imagePreview,
-      replyTo: replyTo?._id || null,
-    });
-    setIsSending(false);
+    try {
+      await sendMessage({
+        text: text.trim(),
+        image: imagePreview,
+        replyTo: replyTo?._id || null,
+      });
 
-    setText('');
-    setImagePreview(null);
-    setReplyTo(null);
-    if (fileInputRef.current) fileInputRef.current.value = null;
+      setText('');
+      setImagePreview(null);
+      setReplyTo(null);
+      if (fileInputRef.current) fileInputRef.current.value = null;
 
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+
+      // Maintain focus without scrolling - important for mobile
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          // Small timeout to ensure DOM updates are complete
+          setTimeout(() => {
+            textareaRef.current.focus({ preventScroll: true });
+          }, 50);
+        }
+      });
+    } catch (error) {
+      toast.error('Failed to send message', error);
+    } finally {
+      setIsSending(false);
+      sendTypingStatus(selectedUser._id, false);
     }
-
-    // Maintain focus without scrolling
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus({ preventScroll: true });
-    });
-
-    sendTypingStatus(selectedUser._id, false);
   };
 
   const handleEnterKey = (e) => {
@@ -228,7 +268,7 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
     isComposingRef.current = false;
   };
 
-  // Use useCallback to prevent unnecessary re-renders
+  // Throttled text change handler to prevent performance issues
   const handleTextChange = useCallback(
     (e) => {
       const newText = e.target.value;
@@ -245,10 +285,25 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
         2000,
       );
 
-      // Auto-resize textarea without causing layout shifts
+      // Auto-resize textarea with better mobile handling
       const textarea = e.target;
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+      requestAnimationFrame(() => {
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 120);
+        textarea.style.height = `${newHeight}px`;
+
+        // On mobile, scroll the messages container when input expands
+        if (newHeight > 60) {
+          const messagesContainer = document.querySelector(
+            '[class*="overflow-y-auto"]',
+          );
+          if (messagesContainer) {
+            setTimeout(() => {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+          }
+        }
+      });
     },
     [isSoundEnabled, selectedUser, sendTypingStatus, playRandomKeystrokeSound],
   );
@@ -262,6 +317,12 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
       return;
     }
 
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
@@ -271,6 +332,32 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
+
+  // Handle outside clicks to maintain focus
+  useEffect(() => {
+    const handleDocumentClick = (e) => {
+      // If click is outside the input but not on the keyboard
+      if (
+        textareaRef.current &&
+        !textareaRef.current.contains(e.target) &&
+        e.target.tagName !== 'TEXTAREA' &&
+        e.target.tagName !== 'INPUT'
+      ) {
+        // On mobile, maintain focus on the input
+        setTimeout(() => {
+          if (
+            textareaRef.current &&
+            document.activeElement !== textareaRef.current
+          ) {
+            textareaRef.current.focus({ preventScroll: true });
+          }
+        }, 100);
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
 
   return (
     <form
@@ -303,9 +390,9 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
         />
       </label>
 
-      {/* Textarea with fixed height management */}
+      {/* Textarea with improved mobile handling */}
       <textarea
-        ref={textareaRef}
+        ref={setCombinedRefs}
         value={text}
         onChange={handleTextChange}
         onKeyDown={handleEnterKey}
@@ -314,16 +401,19 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
         placeholder="Type a message..."
         rows={1}
         className="flex-1 p-2 rounded-md bg-gray-700 text-white outline-none resize-none max-h-32 overflow-y-auto border border-gray-600 transition-all duration-150"
-        style={{ minHeight: '40px' }}
+        style={{ minHeight: '44px' }} // Minimum touch target size for mobile
       />
 
       {/* Send button */}
       <button
         type="submit"
-        disabled={isSending}
-        className={`p-2 text-cyan-500 hover:text-cyan-700 transition-transform ${
-          isSending ? 'animate-pulse' : ''
-        }`}
+        disabled={isSending || (!text.trim() && !imagePreview)}
+        className={`p-2 rounded-full ${
+          text.trim() || imagePreview
+            ? 'bg-cyan-600 text-white hover:bg-cyan-700'
+            : 'bg-gray-600 text-gray-400'
+        } transition-colors ${isSending ? 'animate-pulse' : ''}`}
+        style={{ minWidth: '44px', minHeight: '44px' }} // Mobile touch target
       >
         <Send className="w-5 h-5" />
       </button>
@@ -339,7 +429,8 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
           <button
             onClick={removeImage}
             type="button"
-            className="absolute top-1 right-1 bg-gray-700 rounded-full p-1 shadow"
+            className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1 shadow"
+            style={{ width: '28px', height: '28px' }} // Mobile touch target
           >
             <X className="w-4 h-4 text-red-500" />
           </button>

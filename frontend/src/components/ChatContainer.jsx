@@ -362,7 +362,6 @@ import ChatHeader from './ChatHeader';
 import NoChatHistoryPlaceholder from './NoChatHistoryPlacholder';
 import MessageInput from './MessageInput';
 import MessagesLoadingSkeleton from './MessagesLoadingkeleton';
-import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const ChatContainer = () => {
@@ -384,7 +383,7 @@ const ChatContainer = () => {
   const { authUser } = useAuthStore();
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const inputFocusPreserverRef = useRef(null);
+  const inputRef = useRef(null);
 
   const [prevLength, setPrevLength] = useState(0);
   const [activeMsgId, setActiveMsgId] = useState(null);
@@ -392,10 +391,34 @@ const ChatContainer = () => {
   const [editText, setEditText] = useState('');
   const [replyTo, setReplyTo] = useState(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // Create refs for all messages to enable "jump to message"
   const messageRefs = useRef({});
+
+  // Detect keyboard visibility on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const isKeyboardVisible =
+        window.visualViewport.height < window.innerHeight * 0.7;
+      setKeyboardVisible(isKeyboardVisible);
+
+      if (isKeyboardVisible && inputRef.current) {
+        // When keyboard appears, focus the input
+        inputRef.current.focus();
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   // Load messages & subscribe
   useEffect(() => {
@@ -442,47 +465,34 @@ const ChatContainer = () => {
     return () => container.removeEventListener('scroll', checkScrollPosition);
   }, [checkScrollPosition]);
 
-  // Store current focus state before messages update
-  useEffect(() => {
-    const activeElement = document.activeElement;
-    if (activeElement && activeElement.tagName === 'TEXTAREA') {
-      inputFocusPreserverRef.current = activeElement;
-      setShouldMaintainFocus(true);
-    }
-  }, [messages]);
-
-  // Restore focus after messages update if needed
-  useEffect(() => {
-    if (shouldMaintainFocus && inputFocusPreserverRef.current) {
-      requestAnimationFrame(() => {
-        inputFocusPreserverRef.current?.focus({ preventScroll: true });
-        setShouldMaintainFocus(false);
-      });
-    }
-  }, [messages, shouldMaintainFocus]);
-
   // Auto-scroll to bottom when new messages arrive and user is at bottom
   useEffect(() => {
     if (!messagesEndRef.current || !isAtBottom) return;
 
     const isNewMessage = messages.length > prevLength;
 
-    // Use a more controlled approach to scrolling
-    const scrollToBottom = () => {
+    // Scroll to bottom with a small delay to ensure DOM is updated
+    const scrollTimer = setTimeout(() => {
       if (messagesEndRef.current && isAtBottom) {
         messagesEndRef.current.scrollIntoView({
           behavior: isNewMessage ? 'smooth' : 'auto',
           block: 'end',
         });
       }
-    };
-
-    // Delay scroll slightly to allow DOM to update
-    const scrollTimer = setTimeout(scrollToBottom, 50);
+    }, 50);
 
     setPrevLength(messages.length);
     return () => clearTimeout(scrollTimer);
   }, [messages, prevLength, isAtBottom]);
+
+  // Scroll to bottom when keyboard appears to keep input in view
+  useEffect(() => {
+    if (keyboardVisible && messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  }, [keyboardVisible]);
 
   const isUserTyping = typingStatus[selectedUser?._id];
 
@@ -627,125 +637,112 @@ const ChatContainer = () => {
               const replyMsg = msg.replyTo; // populated reply message
 
               return (
-                <AnimatePresence key={msg._id}>
-                  <motion.div
-                    ref={(el) => (messageRefs.current[msg._id] = el)}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className={`flex ${
-                      isSender ? 'justify-end' : 'justify-start'
+                <div
+                  key={msg._id}
+                  ref={(el) => (messageRefs.current[msg._id] = el)}
+                  className={`flex ${
+                    isSender ? 'justify-end' : 'justify-start'
+                  }`}
+                  onMouseEnter={() => setActiveMsgId(msg._id)}
+                  onMouseLeave={() => setActiveMsgId(null)}
+                >
+                  <div
+                    className={`relative max-w-xs break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap ${
+                      isSender
+                        ? 'bg-cyan-800 text-white'
+                        : 'bg-slate-800 text-slate-200'
                     }`}
-                    onMouseEnter={() => setActiveMsgId(msg._id)}
-                    onMouseLeave={() => setActiveMsgId(null)}
                   >
-                    <div
-                      className={`relative max-w-xs break-words rounded-2xl px-4 py-2 shadow-lg whitespace-pre-wrap ${
-                        isSender
-                          ? 'bg-cyan-800 text-white'
-                          : 'bg-slate-800 text-slate-200'
-                      }`}
-                    >
-                      {/* Reply preview */}
-                      {replyMsg && (
-                        <div
-                          onClick={() => scrollToMessage(replyMsg._id)}
-                          className="mb-1 p-2 border-l-4 border-cyan-400 bg-gray-700 text-xs text-gray-300 rounded cursor-pointer hover:bg-gray-600"
+                    {/* Reply preview */}
+                    {replyMsg && (
+                      <div
+                        onClick={() => scrollToMessage(replyMsg._id)}
+                        className="mb-1 p-2 border-l-4 border-cyan-400 bg-gray-700 text-xs text-gray-300 rounded cursor-pointer hover:bg-gray-600"
+                      >
+                        ↩️ {replyMsg.text || 'Media'}
+                      </div>
+                    )}
+
+                    {/* Edit mode */}
+                    {editingId === msg._id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditConfirm(msg._id);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          autoFocus
+                          className="w-full rounded-md bg-gray-700 px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        />
+                        <button
+                          onClick={() => handleEditConfirm(msg._id)}
+                          className="ml-2 rounded px-2 py-1 text-sm bg-cyan-700"
                         >
-                          ↩️ {replyMsg.text || 'Media'}
-                        </div>
-                      )}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="ml-1 rounded px-2 py-1 text-sm bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>{renderMessageContent(msg)}</>
+                    )}
 
-                      {/* Edit mode */}
-                      {editingId === msg._id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleEditConfirm(msg._id);
-                              if (e.key === 'Escape') setEditingId(null);
-                            }}
-                            autoFocus
-                            className="w-full rounded-md bg-gray-700 px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                          />
-                          <button
-                            onClick={() => handleEditConfirm(msg._id)}
-                            className="ml-2 rounded px-2 py-1 text-sm bg-cyan-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="ml-1 rounded px-2 py-1 text-sm bg-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>{renderMessageContent(msg)}</>
-                      )}
+                    {/* Timestamp + Read receipts */}
+                    <p className="mt-1 text-xs text-gray-300 flex items-center justify-end">
+                      {new Date(msg.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      {renderReadReceipt(msg)}
+                    </p>
 
-                      {/* Timestamp + Read receipts */}
-                      <p className="mt-1 text-xs text-gray-300 flex items-center justify-end">
-                        {new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        {renderReadReceipt(msg)}
-                      </p>
-
-                      {/* Toolbar */}
-                      <AnimatePresence>
-                        {activeMsgId === msg._id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute -top-8 right-0 flex gap-2"
-                          >
-                            {/* Sender can edit/delete */}
-                            {isSender && (
-                              <>
-                                <button
-                                  className="px-2 py-1 text-xs bg-cyan-600 rounded text-white"
-                                  onClick={() => {
-                                    setEditingId(msg._id);
-                                    setEditText(msg.text || '');
-                                    setActiveMsgId(null);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className="px-2 py-1 text-xs bg-red-600 rounded text-white"
-                                  onClick={() => handleDelete(msg._id)}
-                                >
-                                  Delete
-                                </button>
-                              </>
-                            )}
-
-                            {/* Only incoming messages can be replied to */}
-                            {!isSender && (
-                              <button
-                                className="px-2 py-1 text-xs bg-blue-600 rounded text-white"
-                                onClick={() => {
-                                  setReplyTo(msg);
-                                  setActiveMsgId(null);
-                                }}
-                              >
-                                Reply
-                              </button>
-                            )}
-                          </motion.div>
+                    {/* Toolbar */}
+                    {activeMsgId === msg._id && (
+                      <div className="absolute -top-8 right-0 flex gap-2">
+                        {/* Sender can edit/delete */}
+                        {isSender && (
+                          <>
+                            <button
+                              className="px-2 py-1 text-xs bg-cyan-600 rounded text-white"
+                              onClick={() => {
+                                setEditingId(msg._id);
+                                setEditText(msg.text || '');
+                                setActiveMsgId(null);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="px-2 py-1 text-xs bg-red-600 rounded text-white"
+                              onClick={() => handleDelete(msg._id)}
+                            >
+                              Delete
+                            </button>
+                          </>
                         )}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+
+                        {/* Only incoming messages can be replied to */}
+                        {!isSender && (
+                          <button
+                            className="px-2 py-1 text-xs bg-blue-600 rounded text-white"
+                            onClick={() => {
+                              setReplyTo(msg);
+                              setActiveMsgId(null);
+                            }}
+                          >
+                            Reply
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
             <div ref={messagesEndRef} />
@@ -760,7 +757,11 @@ const ChatContainer = () => {
       )}
 
       <div className="border-t border-gray-700 bg-gray-800 px-4 py-3 relative">
-        <MessageInput replyTo={replyTo} setReplyTo={setReplyTo} />
+        <MessageInput
+          replyTo={replyTo}
+          setReplyTo={setReplyTo}
+          inputRef={inputRef}
+        />
       </div>
     </div>
   );

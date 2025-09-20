@@ -49,3 +49,45 @@ body {
 .animate-border-glow {
   animation: border-glow 6s linear infinite;
 }
+
+/* Scrolling */
+/* Prevent zoom on input focus on mobile */
+@media screen and (max-width: 768px) {
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* Improve touch interactions */
+  button,
+  label {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Better scrolling on mobile */
+.message-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Chat container ui for mobile devices */
+/* Improve touch targets for mobile */
+.message-container {
+  min-height: 44px; /* Minimum touch target size */
+}
+
+/* Action buttons styling for better mobile visibility */
+.absolute.-top-8.right-0 {
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+/* Prevent text selection on tap */
+.message-container {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
