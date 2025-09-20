@@ -177,6 +177,7 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const isComposingRef = useRef(false);
 
   useEffect(() => {
     textareaRef.current?.focus({ preventScroll: true });
@@ -204,15 +205,27 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
       textareaRef.current.style.height = 'auto';
     }
 
-    textareaRef.current?.focus({ preventScroll: true });
+    // Maintain focus without scrolling
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+
     sendTypingStatus(selectedUser._id, false);
   };
 
   const handleEnterKey = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       handleSendMessage(e);
     }
+  };
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposingRef.current = false;
   };
 
   // Use useCallback to prevent unnecessary re-renders
@@ -296,6 +309,8 @@ const MessageInput = ({ replyTo, setReplyTo }) => {
         value={text}
         onChange={handleTextChange}
         onKeyDown={handleEnterKey}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         placeholder="Type a message..."
         rows={1}
         className="flex-1 p-2 rounded-md bg-gray-700 text-white outline-none resize-none max-h-32 overflow-y-auto border border-gray-600 transition-all duration-150"

@@ -384,6 +384,7 @@ const ChatContainer = () => {
   const { authUser } = useAuthStore();
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const inputFocusPreserverRef = useRef(null);
 
   const [prevLength, setPrevLength] = useState(0);
   const [activeMsgId, setActiveMsgId] = useState(null);
@@ -391,6 +392,7 @@ const ChatContainer = () => {
   const [editText, setEditText] = useState('');
   const [replyTo, setReplyTo] = useState(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [shouldMaintainFocus, setShouldMaintainFocus] = useState(false);
 
   // Create refs for all messages to enable "jump to message"
   const messageRefs = useRef({});
@@ -440,21 +442,46 @@ const ChatContainer = () => {
     return () => container.removeEventListener('scroll', checkScrollPosition);
   }, [checkScrollPosition]);
 
+  // Store current focus state before messages update
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'TEXTAREA') {
+      inputFocusPreserverRef.current = activeElement;
+      setShouldMaintainFocus(true);
+    }
+  }, [messages]);
+
+  // Restore focus after messages update if needed
+  useEffect(() => {
+    if (shouldMaintainFocus && inputFocusPreserverRef.current) {
+      requestAnimationFrame(() => {
+        inputFocusPreserverRef.current?.focus({ preventScroll: true });
+        setShouldMaintainFocus(false);
+      });
+    }
+  }, [messages, shouldMaintainFocus]);
+
   // Auto-scroll to bottom when new messages arrive and user is at bottom
   useEffect(() => {
     if (!messagesEndRef.current || !isAtBottom) return;
 
     const isNewMessage = messages.length > prevLength;
 
-    // Use requestAnimationFrame for smoother scrolling
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: isNewMessage ? 'smooth' : 'auto',
-        block: 'end',
-      });
-    });
+    // Use a more controlled approach to scrolling
+    const scrollToBottom = () => {
+      if (messagesEndRef.current && isAtBottom) {
+        messagesEndRef.current.scrollIntoView({
+          behavior: isNewMessage ? 'smooth' : 'auto',
+          block: 'end',
+        });
+      }
+    };
+
+    // Delay scroll slightly to allow DOM to update
+    const scrollTimer = setTimeout(scrollToBottom, 50);
 
     setPrevLength(messages.length);
+    return () => clearTimeout(scrollTimer);
   }, [messages, prevLength, isAtBottom]);
 
   const isUserTyping = typingStatus[selectedUser?._id];
