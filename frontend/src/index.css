@@ -21,3 +21,31 @@ body {
     min-height: 100%;
   }
 }
+
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.animate-gradient-x {
+  animation: gradient-x 8s ease infinite;
+}
+
+@keyframes border-glow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.animate-border-glow {
+  animation: border-glow 6s linear infinite;
+}
