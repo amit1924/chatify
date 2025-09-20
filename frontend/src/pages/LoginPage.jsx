@@ -341,7 +341,7 @@ const LoginPage = () => {
       {/* Right side - Login form */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <motion.div
-          className="w-full max-w-md bg-gray-900/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-purple-900/30"
+          className="w-full max-w-sm md:max-w-md bg-gray-900/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-purple-900/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
