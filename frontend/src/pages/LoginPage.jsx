@@ -228,9 +228,10 @@ import {
   Lock,
   MessageCircle,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -238,7 +239,10 @@ const LoginPage = () => {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const { login, isLoggingIn } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -252,13 +256,13 @@ const LoginPage = () => {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 overflow-hidden relative">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(5)].map((_, i) => (
+        {[...Array(3)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full bg-purple-700 opacity-20"
             style={{
-              width: Math.random() * 300 + 100,
-              height: Math.random() * 300 + 100,
+              width: Math.random() * 200 + 50,
+              height: Math.random() * 200 + 50,
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
             }}
@@ -275,8 +279,92 @@ const LoginPage = () => {
         ))}
       </div>
 
-      {/* Left side - Branding and illustration */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative">
+      {/* Mobile header - visible only on small screens */}
+      <motion.div
+        className="lg:hidden flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-20"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-full bg-gray-800/50 backdrop-blur-sm text-gray-300"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div className="flex items-center gap-2 text-white font-bold">
+          <MessageCircle className="h-6 w-6 text-purple-300" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-pink-300">
+            Chatify
+          </span>
+        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 rounded-full bg-gray-800/50 backdrop-blur-sm text-gray-300"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+      </motion.div>
+
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <motion.div
+          className="fixed inset-0 bg-gray-900/95 backdrop-blur-sm z-30 lg:hidden flex flex-col items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 text-gray-300"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+          <div className="flex flex-col items-center space-y-6 text-lg">
+            <Link
+              to="/signup"
+              className="text-gray-300 hover:text-white transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Sign Up
+            </Link>
+            <Link
+              to="/"
+              className="text-gray-300 hover:text-white transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Left side - Branding and illustration (hidden on mobile) */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-8 xl:p-12 relative">
         <motion.div
           className="flex items-center gap-2 text-white text-2xl font-bold"
           initial={{ opacity: 0, y: -20 }}
@@ -295,16 +383,16 @@ const LoginPage = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, delay: 0.2 }}
         >
-          <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-4xl xl:text-5xl font-bold text-white mb-4 xl:mb-6 leading-tight">
             WELCOME <span className="text-purple-300">BACK</span>
           </h1>
-          <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+          <p className="text-gray-300 text-base xl:text-lg mb-6 xl:mb-8 leading-relaxed">
             We're thrilled to have you back! Continue your conversations and
             stay connected with your friends and community.
           </p>
 
           {/* Feature highlights */}
-          <div className="space-y-4">
+          <div className="space-y-3 xl:space-y-4">
             {[
               'Instant messaging with real-time updates',
               'Secure end-to-end encryption',
@@ -312,7 +400,7 @@ const LoginPage = () => {
             ].map((feature, index) => (
               <motion.div
                 key={index}
-                className="flex items-center gap-3 text-gray-300"
+                className="flex items-center gap-3 text-gray-300 text-sm xl:text-base"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
@@ -325,7 +413,7 @@ const LoginPage = () => {
         </motion.div>
 
         <motion.div
-          className="flex gap-6 text-sm text-gray-400"
+          className="flex gap-4 xl:gap-6 text-xs xl:text-sm text-gray-400"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
@@ -339,16 +427,16 @@ const LoginPage = () => {
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-12">
         <motion.div
-          className="w-full max-w-sm md:max-w-md bg-gray-900/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-purple-900/30"
+          className="w-full max-w-xs sm:max-w-sm md:max-w-md bg-gray-900/80 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 md:p-8 border border-purple-900/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
         >
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <motion.div
-              className="flex justify-center mb-4"
+              className="flex justify-center mb-3 sm:mb-4"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{
@@ -359,34 +447,36 @@ const LoginPage = () => {
               }}
             >
               <div className="relative">
-                <MessageCircle className="h-12 w-12 text-purple-400" />
+                <MessageCircle className="h-10 w-10 sm:h-12 sm:w-12 text-purple-400" />
                 <motion.div
                   className="absolute -top-1 -right-1"
                   animate={{ rotate: [0, 360] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
                 >
-                  <Sparkles className="h-5 w-5 text-pink-400" />
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-pink-400" />
                 </motion.div>
               </div>
             </motion.div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-gray-400">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base">
               Sign in to continue your conversations
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Email */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.3 }}
             >
-              <label className="block text-gray-300 mb-2 text-sm font-medium">
+              <label className="block text-gray-300 mb-1 sm:mb-2 text-sm font-medium">
                 Email
               </label>
-              <div className="flex items-center bg-gray-800/50 rounded-lg px-4 py-3 focus-within:ring-2 focus-within:ring-purple-500 border border-gray-700/50 transition-all">
-                <Mail className="text-gray-400 w-5 h-5 mr-3" />
+              <div className="flex items-center bg-gray-800/50 rounded-lg px-3 sm:px-4 py-2 sm:py-3 focus-within:ring-2 focus-within:ring-purple-500 border border-gray-700/50 transition-all">
+                <Mail className="text-gray-400 w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
                 <input
                   type="email"
                   name="email"
@@ -394,7 +484,7 @@ const LoginPage = () => {
                   onChange={handleChange}
                   placeholder="john@example.com"
                   required
-                  className="bg-transparent flex-1 outline-none text-white placeholder-gray-500"
+                  className="bg-transparent flex-1 outline-none text-white placeholder-gray-500 text-sm sm:text-base"
                 />
               </div>
             </motion.div>
@@ -405,11 +495,11 @@ const LoginPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.4 }}
             >
-              <label className="block text-gray-300 mb-2 text-sm font-medium">
+              <label className="block text-gray-300 mb-1 sm:mb-2 text-sm font-medium">
                 Password
               </label>
-              <div className="flex items-center bg-gray-800/50 rounded-lg px-4 py-3 focus-within:ring-2 focus-within:ring-purple-500 border border-gray-700/50 transition-all">
-                <Lock className="text-gray-400 w-5 h-5 mr-3" />
+              <div className="flex items-center bg-gray-800/50 rounded-lg px-3 sm:px-4 py-2 sm:py-3 focus-within:ring-2 focus-within:ring-purple-500 border border-gray-700/50 transition-all">
+                <Lock className="text-gray-400 w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -417,17 +507,17 @@ const LoginPage = () => {
                   onChange={handleChange}
                   placeholder="********"
                   required
-                  className="bg-transparent flex-1 outline-none text-white placeholder-gray-500"
+                  className="bg-transparent flex-1 outline-none text-white placeholder-gray-500 text-sm sm:text-base"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="ml-2 text-gray-400 hover:text-white transition-colors"
+                  className="ml-1 sm:ml-2 text-gray-400 hover:text-white transition-colors"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </button>
               </div>
@@ -436,7 +526,7 @@ const LoginPage = () => {
               <div className="text-right mt-2">
                 <a
                   href="#"
-                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  className="text-xs sm:text-sm text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   Forgot password?
                 </a>
@@ -447,53 +537,65 @@ const LoginPage = () => {
             <motion.button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 rounded-lg shadow-lg transition-all disabled:opacity-60 mt-2"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2.5 sm:py-3 rounded-lg shadow-lg transition-all disabled:opacity-60 mt-2 text-sm sm:text-base"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.5 }}
             >
-              {isLoggingIn && <Loader2 className="w-5 h-5 animate-spin" />}
+              {isLoggingIn && (
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+              )}
               {isLoggingIn ? 'Signing In...' : 'Sign In'}
             </motion.button>
           </form>
 
           {/* Divider */}
           <motion.div
-            className="flex items-center my-6"
+            className="flex items-center my-4 sm:my-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.7 }}
           >
             <div className="flex-1 h-px bg-gray-700"></div>
-
+            <span className="px-2 sm:px-3 text-gray-500 text-xs sm:text-sm">
+              or continue with
+            </span>
             <div className="flex-1 h-px bg-gray-700"></div>
           </motion.div>
 
           {/* Social login options */}
-          {/* <motion.div
-            className="grid grid-cols-2 gap-3 mb-6"
+          <motion.div
+            className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.8 }}
           >
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-lg transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <button className="flex items-center justify-center gap-1 sm:gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 sm:py-2.5 rounded-lg transition-colors text-xs sm:text-sm">
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
               </svg>
               GitHub
             </button>
-            <button className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-lg transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-2.033 16.01c.564-1.789 1.632-3.932 1.821-4.474.273-.787-.211-1.136-1.74.209l-.34-.64c1.744-1.897 5.335-2.326 4.113.613-.763 1.835-1.309 3.074-1.621 4.03-.455 1.393.694.984 1.819-.631l.388.726c-2.591 2.927-6.466 2.085-4.25-1.779zm6.586-4.863c-1.819-1.825-2.53-1.648-3.59-.963l.734.867c.603-.484 1.244-.889 1.935-1.176-1.265.736-2.011 1.786-2.011 2.991 0 1.175.779 2.169 1.802 2.414.646.124 1.725-.083 2.536-.82l.734.865c-1.063.685-2.487 1.077-3.744.958-2.342-.218-3.954-2.142-3.734-4.434.219-2.292 2.18-3.957 4.522-3.739 1.257.118 2.462.61 3.387 1.422l-.751-.885z" />
+            <button className="flex items-center justify-center gap-1 sm:gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 sm:py-2.5 rounded-lg transition-colors text-xs sm:text-sm">
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-2.033 16.01c.564-1.789 1.632-3.932 1.821-4.474.273-.787-.211-1.136-1.74.209l-.34-.64c1.744-1.897 5.335-2.326 4.113.613-.763 1.835-1.309 3.074-1.621 4.030-.455 1.393.694.984 1.819-.631l.388.726c-2.591 2.927-6.466 2.085-4.250-1.779zm6.586-4.863c-1.819-1.825-2.53-1.648-3.59-.963l.734.867c.603-.484 1.244-.889 1.935-1.176-1.265.736-2.011 1.786-2.011 2.991 0 1.175.779 2.169 1.802 2.414.646.124 1.725-.083 2.536-.820l.734.865c-1.063.685-2.487 1.077-3.744.958-2.342-.218-3.954-2.142-3.734-4.434.219-2.292 2.18-3.957 4.522-3.739 1.257.118 2.462.610 3.387 1.422l-.751-.885z" />
               </svg>
               Google
             </button>
-          </motion.div> */}
+          </motion.div>
 
           <motion.p
-            className="text-center text-gray-400 text-sm"
+            className="text-center text-gray-400 text-xs sm:text-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.9 }}
