@@ -49,3 +49,39 @@ body {
 .animate-border-glow {
   animation: border-glow 6s linear infinite;
 }
+/* 21st september 9:08pm */
+/* today */
+/* For mobile browsers where 100vh is buggy */
+.chat-page {
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height */
+}
+
+/* Keeps input pinned for very small widths */
+/* Keeps the message input visible above keyboard on phones */
+@media (max-width: 648px) {
+  .message-input-wrapper {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    background: #1f2937; /* gray-800 */
+  }
+}
+
+/* Handle iOS safe area */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Add this to your CSS */
+@layer utilities {
+  .min-h-screen-dynamic {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .h-screen-dynamic {
+    height: 100vh;
+    height: 100dvh;
+  }
+}
