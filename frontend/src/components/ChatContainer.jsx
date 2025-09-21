@@ -356,7 +356,7 @@
 
 // export default ChatContainer;
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useChatStore } from '../store/useChatStore';
 import ChatHeader from './ChatHeader';
@@ -391,8 +391,10 @@ const ChatContainer = () => {
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [replyTo, setReplyTo] = useState(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   const messageRefs = useRef({});
+  const scrollTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -408,6 +410,9 @@ const ChatContainer = () => {
     return () => {
       unsubscribeFromMessages();
       unsubscribeFromTyping();
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
   }, [
     selectedUser,
@@ -419,19 +424,56 @@ const ChatContainer = () => {
     markAllMessagesFromSelectedAsSeen,
   ]);
 
-  // Helper function to check if user is near bottom of chat
-  const isNearBottom = () => {
-    if (!messageContainerRef.current) return true;
+  // Track scroll position
+  const handleScroll = useCallback(() => {
+    if (!messageContainerRef.current) return;
 
-    const threshold = 100;
-    const { scrollTop, clientHeight, scrollHeight } =
+    const { scrollTop, scrollHeight, clientHeight } =
       messageContainerRef.current;
-    return scrollHeight - scrollTop - clientHeight <= threshold;
-  };
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setIsAtBottom(distanceFromBottom <= 100);
+  }, []);
 
-  // Fixed scrolling logic
+  // Add scroll event listener
   useEffect(() => {
-    if (!messageEndRef.current || !messages.length) return;
+    const container = messageContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
+
+  // Mobile-friendly scroll to bottom function
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    if (!messageEndRef.current || !messageContainerRef.current) return;
+
+    // For mobile devices, use a more reliable approach
+    if ('ontouchstart' in window) {
+      // Mobile devices - use a more direct approach
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (messageContainerRef.current) {
+          messageContainerRef.current.scrollTo({
+            top: messageContainerRef.current.scrollHeight,
+            behavior: behavior,
+          });
+        }
+      }, 100);
+    } else {
+      // Desktop - use the standard approach
+      messageEndRef.current.scrollIntoView({
+        behavior: behavior,
+        block: 'nearest',
+      });
+    }
+  }, []);
+
+  // Fixed scrolling logic for mobile
+  useEffect(() => {
+    if (!messages.length) return;
 
     const isNewMessage = messages.length > prevLength;
     const lastMessage = messages[messages.length - 1];
@@ -440,19 +482,30 @@ const ChatContainer = () => {
     // Only auto-scroll if:
     // 1. New messages were added, AND
     // 2. Either the message is from me, or I'm already near the bottom
-    if (isNewMessage && (isFromMe || isNearBottom())) {
-      // Use requestAnimationFrame for smoother scrolling
-      requestAnimationFrame(() => {
-        messageEndRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        });
-      });
+    if (isNewMessage && (isFromMe || isAtBottom)) {
+      // Use a slightly longer delay for mobile to ensure DOM is updated
+      const delay = 'ontouchstart' in window ? 150 : 0;
+
+      setTimeout(() => {
+        scrollToBottom('smooth');
+      }, delay);
     }
 
     // Always update prevLength after checking
     setPrevLength(messages.length);
-  }, [messages, authUser]); // Removed prevLength from dependencies to avoid infinite loop
+  }, [messages, authUser, isAtBottom, prevLength, scrollToBottom]);
+
+  // Initial scroll to bottom when messages load
+  useEffect(() => {
+    if (messages.length > 0 && !isMessagesLoading) {
+      // Slightly longer delay for mobile to ensure proper rendering
+      const delay = 'ontouchstart' in window ? 200 : 50;
+
+      setTimeout(() => {
+        scrollToBottom('auto');
+      }, delay);
+    }
+  }, [isMessagesLoading, messages.length, scrollToBottom]);
 
   const isUserTyping = typingStatus[selectedUser?._id];
 
