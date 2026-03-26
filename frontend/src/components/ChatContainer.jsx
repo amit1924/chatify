@@ -1575,6 +1575,7 @@ const ChatContainer = () => {
   const [connectionAlert, setConnectionAlert] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState({});
   const [isMobile, setIsMobile] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const messageRefs = useRef({});
   const scrollTimeoutRef = useRef(null);
@@ -1592,7 +1593,7 @@ const ChatContainer = () => {
     return words.slice(0, 50).join(' ') + '...';
   };
 
-  // Check if mobile device
+  // Check if mobile device and keyboard visibility
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -1600,6 +1601,22 @@ const ChatContainer = () => {
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    // Detect keyboard on mobile
+    if ('visualViewport' in window) {
+      const handleResize = () => {
+        const viewportHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        const isKeyboardOpen = viewportHeight < windowHeight * 0.8;
+        setKeyboardVisible(isKeyboardOpen);
+      };
+
+      window.visualViewport.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', checkMobile);
+        window.visualViewport?.removeEventListener('resize', handleResize);
+      };
+    }
 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -1782,7 +1799,7 @@ const ChatContainer = () => {
         const youtubeUrl = youtubeMatch[1];
         const videoId = youtubeMatch[2];
         return (
-          <div className="max-w-xs">
+          <div className="max-w-[80vw] sm:max-w-xs">
             <iframe
               className="w-full rounded-lg"
               height="170"
@@ -1813,9 +1830,9 @@ const ChatContainer = () => {
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-400 hover:underline"
+          className="text-blue-400 hover:underline break-all"
         >
-          <p>{link}</p>
+          <p className="break-all">{link}</p>
           <p className="text-xs flex items-center gap-1">
             <FiExternalLink size={12} />
             External Link
@@ -1827,7 +1844,11 @@ const ChatContainer = () => {
     if (msg.image) {
       return (
         <div className="relative">
-          <img src={msg.image} alt="sent" className="max-w-xs rounded-lg" />
+          <img
+            src={msg.image}
+            alt="sent"
+            className="max-w-[80vw] sm:max-w-xs rounded-lg object-cover"
+          />
           <FiImage
             className="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1"
             size={24}
@@ -1838,7 +1859,9 @@ const ChatContainer = () => {
 
     return (
       <div>
-        <p className="break-words whitespace-pre-wrap">{displayText}</p>
+        <p className="break-words whitespace-pre-wrap text-sm sm:text-base">
+          {displayText}
+        </p>
         {msg.text && msg.text.length > 500 && (
           <button
             onClick={() =>
@@ -1869,9 +1892,11 @@ const ChatContainer = () => {
   const renderReadReceipt = (msg) => {
     if (msg.senderId !== authUser._id) return null;
     if (msg.seenBy?.length > 0)
-      return <FiCheckCircle className="ml-1 text-blue-400" size={14} />;
+      return (
+        <FiCheckCircle className="ml-1 text-blue-400 flex-shrink-0" size={14} />
+      );
     if (msg.deliveredTo?.length > 0)
-      return <FiCheck className="ml-1" size={14} />;
+      return <FiCheck className="ml-1 flex-shrink-0" size={14} />;
     return null;
   };
 
@@ -1897,6 +1922,7 @@ const ChatContainer = () => {
             bg-gray-800 border border-gray-700
             rounded-xl shadow-xl
             p-1 flex gap-1
+            z-30
           `}
           >
             {isSender && (
@@ -1938,7 +1964,7 @@ const ChatContainer = () => {
           </div>
         )}
 
-        {/* MOBILE BOTTOM SHEET */}
+        {/* MOBILE BOTTOM SHEET - IMPROVED FOR CUTOFF ISSUE */}
         {isMobile && activeMsgId === msg._id && (
           <>
             {/* Backdrop */}
@@ -1947,14 +1973,20 @@ const ChatContainer = () => {
               onClick={() => setActiveMsgId(null)}
             />
 
-            {/* Bottom sheet */}
+            {/* Bottom sheet - positioned with safe area */}
             <div
-              className="fixed bottom-0 left-0 w-full
+              className="fixed bottom-0 left-0 right-0
               bg-gray-900 border-t border-gray-700
               rounded-t-2xl
               z-50
               p-4
-              animate-slide-up"
+              animate-slide-up
+              safe-area-bottom"
+              style={{
+                maxHeight: '50vh',
+                overflowY: 'auto',
+                paddingBottom: 'env(safe-area-inset-bottom, 1rem)',
+              }}
             >
               {/* drag indicator */}
               <div className="w-10 h-1.5 bg-gray-600 rounded-full mx-auto mb-4" />
@@ -1974,6 +2006,7 @@ const ChatContainer = () => {
                       rounded-xl
                       bg-gray-800 hover:bg-gray-700
                       transition
+                      touch-manipulation
                     "
                     >
                       <FiEdit2 size={20} />
@@ -1989,6 +2022,7 @@ const ChatContainer = () => {
                       bg-red-600/10 hover:bg-red-600/20
                       text-red-400
                       transition
+                      touch-manipulation
                     "
                     >
                       <FiTrash2 size={20} />
@@ -2009,6 +2043,7 @@ const ChatContainer = () => {
                     rounded-xl
                     bg-gray-800 hover:bg-gray-700
                     transition
+                    touch-manipulation
                   "
                   >
                     <FaReply size={20} />
@@ -2025,6 +2060,7 @@ const ChatContainer = () => {
                   rounded-xl
                   bg-gray-700 hover:bg-gray-600
                   transition
+                  touch-manipulation
                 "
                 >
                   Cancel
@@ -2039,20 +2075,22 @@ const ChatContainer = () => {
 
   if (!selectedUser) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-900 text-gray-300">
-        <FiMessageSquare className="mr-2" size={20} />
-        Select a chat to start messaging
+      <div className="flex items-center justify-center h-full bg-gray-900 text-gray-300 p-4 text-center">
+        <FiMessageSquare className="mr-2 flex-shrink-0" size={20} />
+        <span className="text-sm sm:text-base">
+          Select a chat to start messaging
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 relative">
+    <div className="flex flex-col h-full bg-gray-900 relative overflow-hidden">
       {connectionAlert && (
-        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-            <FiLoader className="animate-spin" size={16} />
-            Connection issue. Reconnecting...
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-sm">
+          <div className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs sm:text-sm">
+            <FiLoader className="animate-spin flex-shrink-0" size={14} />
+            <span className="truncate">Connection issue. Reconnecting...</span>
           </div>
         </div>
       )}
@@ -2061,8 +2099,11 @@ const ChatContainer = () => {
 
       <div
         ref={messageContainerRef}
-        className="flex-1 overflow-y-auto px-2 sm:px-4 py-2 bg-gray-900 bg-opacity-95 overflow-x-hidden"
-        style={{ maxWidth: '100vw' }}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 py-2 bg-gray-900 bg-opacity-95"
+        style={{
+          maxWidth: '100%',
+          WebkitOverflowScrolling: 'touch',
+        }}
       >
         {isMessagesLoading ? (
           <MessagesLoadingSkeleton />
@@ -2086,25 +2127,25 @@ const ChatContainer = () => {
                     }
                     className={`flex ${
                       isSender ? 'justify-end' : 'justify-start'
-                    } px-2`}
+                    } px-1 sm:px-2`}
                   >
                     <div
-                      className={`relative max-w-[90vw] sm:max-w-md md:max-w-lg px-3 py-2 rounded-lg ${
+                      className={`relative max-w-[85%] sm:max-w-md md:max-w-lg px-3 py-2 rounded-lg ${
                         isSender ? 'bg-green-800' : 'bg-gray-800'
                       }`}
                     >
                       {replyMsg && (
                         <div
                           onClick={() => scrollToMessage(replyMsg._id)}
-                          className="text-xs p-2 mb-1 bg-black bg-opacity-30 rounded cursor-pointer border-l-2 border-gray-500 max-w-full"
+                          className="text-xs p-2 mb-1 bg-black bg-opacity-30 rounded cursor-pointer border-l-2 border-gray-500"
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="font-semibold flex items-center gap-1 max-w-[85%]">
+                          <div className="flex items-center justify-between mb-1 gap-2">
+                            <div className="font-semibold flex items-center gap-1 min-w-0 flex-1">
                               <FiCornerUpLeft
                                 size={12}
                                 className="flex-shrink-0"
                               />
-                              <span className="truncate">
+                              <span className="truncate text-xs">
                                 {replyMsg.senderId === authUser._id
                                   ? 'Replying to yourself'
                                   : `Replying to ${selectedUser.fullName}`}
@@ -2115,18 +2156,18 @@ const ChatContainer = () => {
                                 e.stopPropagation();
                                 setReplyTo(null);
                               }}
-                              className="ml-2 text-gray-400 hover:text-white flex-shrink-0 p-1 rounded hover:bg-gray-600 transition-colors"
+                              className="text-gray-400 hover:text-white flex-shrink-0 p-1 rounded hover:bg-gray-600 transition-colors"
                               title="Cancel reply"
                             >
                               <FiX size={12} />
                             </button>
                           </div>
                           <div
-                            className="text-gray-300 break-words overflow-hidden"
+                            className="text-gray-300 break-words"
                             title={replyMsg.text || 'Media message'}
                           >
                             {replyMsg.text ? (
-                              <div className="max-h-12 overflow-hidden">
+                              <div className="line-clamp-2 overflow-hidden">
                                 {getMessagePreview(replyMsg.text)}
                               </div>
                             ) : (
@@ -2141,27 +2182,31 @@ const ChatContainer = () => {
 
                       {editingId === msg._id ? (
                         <div className="flex flex-col space-y-2">
-                          <input
-                            className="bg-gray-700 text-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                          <textarea
+                            className="bg-gray-700 text-white rounded p-2 focus:outline-none focus:ring-1 focus:ring-green-500 text-sm sm:text-base"
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleEditConfirm(msg._id);
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleEditConfirm(msg._id);
+                              }
                               if (e.key === 'Escape') setEditingId(null);
                             }}
                             autoFocus
+                            rows={3}
                           />
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEditConfirm(msg._id)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 touch-manipulation"
                             >
                               <FiSave size={14} />
                               Save
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
-                              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 touch-manipulation"
                             >
                               <FiX size={14} />
                               Cancel
@@ -2173,7 +2218,7 @@ const ChatContainer = () => {
                       )}
 
                       <div className="flex items-center justify-end mt-1 gap-1">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 flex-shrink-0">
                           {new Date(msg.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -2194,13 +2239,13 @@ const ChatContainer = () => {
       </div>
 
       {showTypingIndicator && (
-        <div className="px-4 py-1 text-sm text-gray-400 italic flex items-center gap-2">
-          <FiLoader className="animate-spin" size={12} />
-          {selectedUser.fullName} is typing...
+        <div className="px-3 sm:px-4 py-1 text-xs sm:text-sm text-gray-400 italic flex items-center gap-2">
+          <FiLoader className="animate-spin flex-shrink-0" size={12} />
+          <span className="truncate">{selectedUser.fullName} is typing...</span>
         </div>
       )}
 
-      <div className="border-t border-gray-700 bg-gray-800 relative z-50">
+      <div className="border-t border-gray-700 bg-gray-800 relative z-50 safe-area-bottom">
         <MessageInput replyTo={replyTo} setReplyTo={setReplyTo} />
       </div>
     </div>
